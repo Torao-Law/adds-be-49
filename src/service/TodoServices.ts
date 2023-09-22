@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import Todo from "../databases/models/todo";
 import ITodos from "../interface/Todos";
 import Todos from "../mocks/Todos";
 
@@ -9,61 +10,64 @@ export default new class TodoService {
     this.todos = [ ...Todos ]
   }
 
-  find(req: Request, res: Response) : Response {
+  async find(req: Request, res: Response) : Promise<Response> {
     try {
-      return res.status(200).json(this.todos)
+      const todos = await Todo.findAll()
+
+      return res.status(200).json(todos)
     } catch (error) {
       return res.status(500).json({ error: "Internal Server Error"})
     }
   }
 
-  findOne(req: Request, res: Response) : Response {
+  async findOne(req: Request, res: Response) : Promise<Response> {
     try {
       const id = Number(req.params.id)
-      const data = Todos.find((data) => data.id === id)
+      if (isNaN(id) || id <= 0) return res.status(400).json({ Error: "Invalid id"})
 
-      return res.status(200).json(data)
+      const todo = await Todo.findByPk(id)
+      if(!todo) return res.status(404).json({ Error: "ID Not found "})
+      
+      return res.status(200).json(todo)
     } catch (error) {
       return res.status(500).json({ message: "Something error while findOne"})
     }
   }
 
-  create(req:Request, res:Response) : Response {
+  async create(req:Request, res:Response) : Promise<Response> {
     try {
-      const data: ITodos = req.body
-      Todos.push(data)
+      const { title, isDone } = req.body
+      const todo = await Todo.create({ title, isDone })
 
-      return res.status(200).json({ data: Todos})
+      return res.status(200).json(todo)
     } catch (error) {
       return res.status(500).json({ message: "Something error while create todo" })
     }
   }
 
-  update(req: Request, res: Response) : Response {
+  async update(req: Request, res: Response) : Promise<Response> {
     try {
       const id: number = Number(req.params.id)
-      const updateTodo: ITodos = req.body
+      const todoToUpdate = await Todo.findByPk(id)
+      if(!todoToUpdate) return res.status(404).json({ Error: "Todo not found" })
 
-      const index: number = this.todos.findIndex(todo => todo.id === id)
-      
-      if(index !== -1) {
-        this.todos[index] = { ...this.todos[index], ...updateTodo }
-        const data = this.todos[index]
-        return res.status(200).json(data)
-      }
+      const updateTodo = req.body
+      const todo = await todoToUpdate.update(updateTodo)
 
-      return res.status(404).json({ message: "ID Todo not found"})
+      return res.status(200).json(todo)
     } catch (error) {
       return res.status(500).json({ message: "Something error while update todo" })
     }
   }
 
-  delete(req: Request, res: Response) : Response {
+  async delete(req: Request, res: Response) : Promise<Response> {
     try {
       const { id } = req.params
-      const data: ITodos[] = Todos.filter(todo => todo.id !== parseInt(id))
+      const todoToDelete = await Todo.findByPk(id)
+      if(!todoToDelete) return res.status(404).json({ Error: "Todo not found" })
 
-      return res.status(200).json(data)
+      const todo = await todoToDelete.destroy()
+      return res.status(200).json(todo)
     } catch (error) {
       return res.status(500).json({ message: "Something error while delete todo" })
     }

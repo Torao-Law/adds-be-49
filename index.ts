@@ -1,13 +1,15 @@
 import express from "express"
+import dotenv from "dotenv"
 import router from './src/routes'
 
 async function start(): Promise<void> {
   try {
+    dotenv.config()
+    
     const app = express()
-    const PORT = 5000
+    const PORT = process.env.APP_PORT
 
     app.use(express.json())
-
     app.use("/api/v1", router)
     
     app.listen(PORT, () => console.log("Server express running"))
